@@ -1,11 +1,27 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#define ASMJIT_EXPORTS
-
+#include "../core/api-build_p.h"
 #include "../core/logging.h"
 #include "../core/support.h"
 
@@ -120,15 +136,15 @@ ASMJIT_FAVOR_SIZE Error BaseEmitter::emitProlog(const FuncFrame& frame) {
   if (ASMJIT_UNLIKELY(!_code))
     return DebugUtils::errored(kErrorNotInitialized);
 
-  #ifdef ASMJIT_BUILD_X86
+#ifdef ASMJIT_BUILD_X86
   if (archInfo().isX86Family())
     return x86::X86Internal::emitProlog(as<x86::Emitter>(), frame);
-  #endif
+#endif
 
-  #ifdef ASMJIT_BUILD_ARM
+#ifdef ASMJIT_BUILD_ARM
   if (archInfo().isArmFamily())
     return arm::ArmInternal::emitProlog(as<arm::Emitter>(), frame);
-  #endif
+#endif
 
   return DebugUtils::errored(kErrorInvalidArch);
 }
@@ -137,15 +153,15 @@ ASMJIT_FAVOR_SIZE Error BaseEmitter::emitEpilog(const FuncFrame& frame) {
   if (ASMJIT_UNLIKELY(!_code))
     return DebugUtils::errored(kErrorNotInitialized);
 
-  #ifdef ASMJIT_BUILD_X86
+#ifdef ASMJIT_BUILD_X86
   if (archInfo().isX86Family())
     return x86::X86Internal::emitEpilog(as<x86::Emitter>(), frame);
-  #endif
+#endif
 
-  #ifdef ASMJIT_BUILD_ARM
+#ifdef ASMJIT_BUILD_ARM
   if (archInfo().isArmFamily())
     return arm::ArmInternal::emitEpilog(as<arm::Emitter>(), frame);
-  #endif
+#endif
 
   return DebugUtils::errored(kErrorInvalidArch);
 }
@@ -154,15 +170,15 @@ ASMJIT_FAVOR_SIZE Error BaseEmitter::emitArgsAssignment(const FuncFrame& frame, 
   if (ASMJIT_UNLIKELY(!_code))
     return DebugUtils::errored(kErrorNotInitialized);
 
-  #ifdef ASMJIT_BUILD_X86
+#ifdef ASMJIT_BUILD_X86
   if (archInfo().isX86Family())
     return x86::X86Internal::emitArgsAssignment(as<x86::Emitter>(), frame, args);
-  #endif
+#endif
 
-  #ifdef ASMJIT_BUILD_ARM
+#ifdef ASMJIT_BUILD_ARM
   if (archInfo().isArmFamily())
     return arm::ArmInternal::emitArgsAssignment(as<arm::Emitter>(), frame, args);
-  #endif
+#endif
 
   return DebugUtils::errored(kErrorInvalidArch);
 }
@@ -175,7 +191,7 @@ Error BaseEmitter::commentf(const char* fmt, ...) {
   if (ASMJIT_UNLIKELY(!_code))
     return DebugUtils::errored(kErrorNotInitialized);
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   StringTmp<1024> sb;
 
   va_list ap;
@@ -187,17 +203,17 @@ Error BaseEmitter::commentf(const char* fmt, ...) {
     return err;
 
   return comment(sb.data(), sb.size());
-  #else
-  ASMJIT_UNUSED(fmt);
+#else
+  DebugUtils::unused(fmt);
   return kErrorOk;
-  #endif
+#endif
 }
 
 Error BaseEmitter::commentv(const char* fmt, va_list ap) {
   if (ASMJIT_UNLIKELY(!_code))
     return DebugUtils::errored(kErrorNotInitialized);
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   StringTmp<1024> sb;
 
   Error err = sb.appendVFormat(fmt, ap);
@@ -205,11 +221,10 @@ Error BaseEmitter::commentv(const char* fmt, va_list ap) {
     return err;
 
   return comment(sb.data(), sb.size());
-  #else
-  ASMJIT_UNUSED(fmt);
-  ASMJIT_UNUSED(ap);
+#else
+  DebugUtils::unused(fmt, ap);
   return kErrorOk;
-  #endif
+#endif
 }
 
 // ============================================================================
@@ -226,7 +241,7 @@ Error BaseEmitter::onAttach(CodeHolder* code) noexcept {
 }
 
 Error BaseEmitter::onDetach(CodeHolder* code) noexcept {
-  ASMJIT_UNUSED(code);
+  DebugUtils::unused(code);
 
   _flags = 0;
   _emitterOptions = 0;

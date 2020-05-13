@@ -1,11 +1,27 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#define ASMJIT_EXPORTS
-
+#include "../core/api-build_p.h"
 #include "../core/assembler.h"
 #include "../core/logging.h"
 #include "../core/support.h"
@@ -273,13 +289,13 @@ void CodeHolder::clearEmitterOptions(uint32_t options) noexcept {
 // ============================================================================
 
 void CodeHolder::setLogger(Logger* logger) noexcept {
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   _logger = logger;
   uint32_t option = !logger ? uint32_t(0) : uint32_t(BaseEmitter::kOptionLoggingEnabled);
   CodeHolder_modifyEmitterOptions(this, BaseEmitter::kOptionLoggingEnabled, option);
-  #else
-  ASMJIT_UNUSED(logger);
-  #endif
+#else
+  DebugUtils::unused(logger);
+#endif
 }
 
 // ============================================================================
@@ -607,7 +623,7 @@ Error CodeHolder::newNamedLabelEntry(LabelEntry** entryOut, const char* name, si
 
 uint32_t CodeHolder::labelIdByName(const char* name, size_t nameSize, uint32_t parentId) noexcept {
   // TODO: Finalize - parent id is not used here?
-  ASMJIT_UNUSED(parentId);
+  DebugUtils::unused(parentId);
 
   uint32_t hashCode = CodeHolder_hashNameAndGetSize(name, nameSize);
   if (ASMJIT_UNLIKELY(!nameSize)) return 0;

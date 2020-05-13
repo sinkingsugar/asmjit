@@ -1,10 +1,28 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#include "./asmjit.h"
+#include <asmjit/asmjit.h>
+#include "./broken.h"
 
 using namespace asmjit;
 
@@ -53,7 +71,7 @@ static void dumpCpu(void) noexcept {
   // [X86]
   // --------------------------------------------------------------------------
 
-  #if ASMJIT_ARCH_X86
+#if ASMJIT_ARCH_X86
   static const DumpCpuFeature x86FeaturesList[] = {
     { x86::Features::kNX              , "NX"               },
     { x86::Features::kMT              , "MT"               },
@@ -150,13 +168,13 @@ static void dumpCpu(void) noexcept {
   INFO("X86 Features:");
   dumpFeatures(cpu, x86FeaturesList, ASMJIT_ARRAY_SIZE(x86FeaturesList));
   INFO("");
-  #endif
+#endif
 
   // --------------------------------------------------------------------------
   // [ARM]
   // --------------------------------------------------------------------------
 
-  #if ASMJIT_ARCH_ARM
+#if ASMJIT_ARCH_ARM
   static const DumpCpuFeature armFeaturesList[] = {
     { arm::Features::kARMv6           , "ARMv6"            },
     { arm::Features::kARMv7           , "ARMv7"            },
@@ -180,17 +198,17 @@ static void dumpCpu(void) noexcept {
   INFO("ARM Features:");
   dumpFeatures(cpu, armFeaturesList, ASMJIT_ARRAY_SIZE(armFeaturesList));
   INFO("");
-  #endif
+#endif
 }
 
 // ============================================================================
 // [DumpSizeOf]
 // ============================================================================
 
-static void dumpSizeOf(void) noexcept {
-  #define DUMP_TYPE(...) \
-    INFO("  %-26s: %u", #__VA_ARGS__, uint32_t(sizeof(__VA_ARGS__)))
+#define DUMP_TYPE(...) \
+  INFO("  %-26s: %u", #__VA_ARGS__, uint32_t(sizeof(__VA_ARGS__)))
 
+static void dumpSizeOf(void) noexcept {
   INFO("Size of C++ types:");
     DUMP_TYPE(int8_t);
     DUMP_TYPE(int16_t);
@@ -242,7 +260,7 @@ static void dumpSizeOf(void) noexcept {
     DUMP_TYPE(FuncArgsAssignment);
   INFO("");
 
-  #ifndef ASMJIT_NO_BUILDER
+#ifndef ASMJIT_NO_BUILDER
   INFO("Size of builder classes:");
     DUMP_TYPE(BaseBuilder);
     DUMP_TYPE(BaseNode);
@@ -256,18 +274,18 @@ static void dumpSizeOf(void) noexcept {
     DUMP_TYPE(CommentNode);
     DUMP_TYPE(SentinelNode);
   INFO("");
-  #endif
+#endif
 
-  #ifndef ASMJIT_NO_COMPILER
+#ifndef ASMJIT_NO_COMPILER
   INFO("Size of compiler classes:");
     DUMP_TYPE(BaseCompiler);
     DUMP_TYPE(FuncNode);
     DUMP_TYPE(FuncRetNode);
     DUMP_TYPE(FuncCallNode);
   INFO("");
-  #endif
+#endif
 
-  #ifdef ASMJIT_BUILD_X86
+#ifdef ASMJIT_BUILD_X86
   INFO("Size of x86-specific classes:");
     DUMP_TYPE(x86::Assembler);
     #ifndef ASMJIT_NO_BUILDER
@@ -281,10 +299,10 @@ static void dumpSizeOf(void) noexcept {
     DUMP_TYPE(x86::InstDB::OpSignature);
     DUMP_TYPE(x86::InstDB::InstSignature);
   INFO("");
-  #endif
-
-  #undef DUMP_TYPE
+#endif
 }
+
+#undef DUMP_TYPE
 
 // ============================================================================
 // [Main]
@@ -296,11 +314,11 @@ static void onBeforeRun(void) noexcept {
 }
 
 int main(int argc, const char* argv[]) {
-  #if defined(ASMJIT_BUILD_DEBUG)
+#if defined(ASMJIT_BUILD_DEBUG)
   const char buildType[] = "Debug";
-  #else
+#else
   const char buildType[] = "Release";
-  #endif
+#endif
 
   INFO("AsmJit Unit-Test v%u.%u.%u [Arch=%s] [Mode=%s]\n\n",
     unsigned((ASMJIT_LIBRARY_VERSION >> 16)       ),

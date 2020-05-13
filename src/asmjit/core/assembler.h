@@ -1,11 +1,28 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef _ASMJIT_CORE_ASSEMBLER_H
-#define _ASMJIT_CORE_ASSEMBLER_H
+#ifndef ASMJIT_CORE_ASSEMBLER_H_INCLUDED
+#define ASMJIT_CORE_ASSEMBLER_H_INCLUDED
 
 #include "../core/codeholder.h"
 #include "../core/datatypes.h"
@@ -103,7 +120,7 @@ public:
   ASMJIT_API Error _emitOpArray(uint32_t instId, const Operand_* operands, size_t count) override;
 
 protected:
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   void _emitLog(
     uint32_t instId, uint32_t options, const Operand_& o0, const Operand_& o1, const Operand_& o2, const Operand_& o3,
     uint32_t relSize, uint32_t immSize, uint8_t* afterCursor);
@@ -111,23 +128,17 @@ protected:
   Error _emitFailed(
     Error err,
     uint32_t instId, uint32_t options, const Operand_& o0, const Operand_& o1, const Operand_& o2, const Operand_& o3);
-  #else
+#else
   inline Error _emitFailed(
     uint32_t err,
     uint32_t instId, uint32_t options, const Operand_& o0, const Operand_& o1, const Operand_& o2, const Operand_& o3) {
 
-    ASMJIT_UNUSED(instId);
-    ASMJIT_UNUSED(options);
-    ASMJIT_UNUSED(o0);
-    ASMJIT_UNUSED(o1);
-    ASMJIT_UNUSED(o2);
-    ASMJIT_UNUSED(o3);
-
+    DebugUtils::unused(instId, options, o0, o1, o2, o3);
     resetInstOptions();
     resetInlineComment();
     return reportError(err);
   }
-  #endif
+#endif
 public:
   //! \}
   //! \endcond
@@ -162,4 +173,4 @@ public:
 
 ASMJIT_END_NAMESPACE
 
-#endif // _ASMJIT_CORE_ASSEMBLER_H
+#endif // ASMJIT_CORE_ASSEMBLER_H_INCLUDED

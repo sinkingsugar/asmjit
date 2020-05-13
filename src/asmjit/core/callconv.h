@@ -1,11 +1,28 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef _ASMJIT_CORE_CALLCONV_H
-#define _ASMJIT_CORE_CALLCONV_H
+#ifndef ASMJIT_CORE_CALLCONV_H_INCLUDED
+#define ASMJIT_CORE_CALLCONV_H_INCLUDED
 
 #include "../core/arch.h"
 #include "../core/operand.h"
@@ -158,7 +175,7 @@ struct CallConv {
     // [Host]
     // ------------------------------------------------------------------------
 
-    #if defined(ASMJIT_DOCGEN)
+#if defined(ASMJIT_DOCGEN)
 
     //! Default calling convention based on the current C++ compiler's settings.
     //!
@@ -180,31 +197,31 @@ struct CallConv {
     //! \note If not defined by the host then it's the same as `kIdHostCDecl`.
     kIdHostFastCall   = DETECTED_AT_COMPILE_TIME
 
-    #elif ASMJIT_ARCH_X86 == 32
+#elif ASMJIT_ARCH_X86 == 32
 
     kIdHost           = kIdX86CDecl,
     kIdHostCDecl      = kIdX86CDecl,
     kIdHostStdCall    = kIdX86StdCall,
 
-    #if defined(_MSC_VER)
+# if defined(_MSC_VER)
     kIdHostFastCall   = kIdX86MsFastCall,
-    #elif defined(__GNUC__)
+# elif defined(__GNUC__)
     kIdHostFastCall   = kIdX86GccFastCall,
-    #else
+# else
     kIdHostFastCall   = kIdHost,
-    #endif
+# endif
 
     kIdHostLightCall2 = kIdX86LightCall2,
     kIdHostLightCall3 = kIdX86LightCall3,
     kIdHostLightCall4 = kIdX86LightCall4
 
-    #elif ASMJIT_ARCH_X86 == 64
+#elif ASMJIT_ARCH_X86 == 64
 
-    #if defined(_WIN32)
+# if defined(_WIN32)
     kIdHost           = kIdX86Win64,
-    #else
+# else
     kIdHost           = kIdX86SysV64,
-    #endif
+# endif
 
     kIdHostCDecl      = kIdHost, // Doesn't exist, redirected to host.
     kIdHostStdCall    = kIdHost, // Doesn't exist, redirected to host.
@@ -214,26 +231,26 @@ struct CallConv {
     kIdHostLightCall3 = kIdX64LightCall3,
     kIdHostLightCall4 = kIdX64LightCall4
 
-    #elif ASMJIT_ARCH_ARM == 32
+#elif ASMJIT_ARCH_ARM == 32
 
-    #if defined(__SOFTFP__)
+# if defined(__SOFTFP__)
     kIdHost           = kIdArm32SoftFP,
-    #else
+# else
     kIdHost           = kIdArm32HardFP,
-    #endif
+# endif
     // These don't exist on ARM.
     kIdHostCDecl      = kIdHost, // Doesn't exist, redirected to host.
     kIdHostStdCall    = kIdHost, // Doesn't exist, redirected to host.
     kIdHostFastCall   = kIdHost  // Doesn't exist, redirected to host.
 
-    #else
+#else
 
     kIdHost           = kIdNone,
     kIdHostCDecl      = kIdHost,
     kIdHostStdCall    = kIdHost,
     kIdHostFastCall   = kIdHost
 
-    #endif
+#endif
   };
 
   //! Strategy used to assign registers to function arguments.
@@ -391,4 +408,4 @@ struct CallConv {
 
 ASMJIT_END_NAMESPACE
 
-#endif // _ASMJIT_CORE_CALLCONV_H
+#endif // ASMJIT_CORE_CALLCONV_H_INCLUDED

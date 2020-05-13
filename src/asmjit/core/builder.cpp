@@ -1,12 +1,27 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#define ASMJIT_EXPORTS
-
-#include "../core/build.h"
+#include "../core/api-build_p.h"
 #ifndef ASMJIT_NO_BUILDER
 
 #include "../core/builder.h"
@@ -25,9 +40,7 @@ ASMJIT_BEGIN_NAMESPACE
 class PostponedErrorHandler : public ErrorHandler {
 public:
   void handleError(Error err, const char* message, BaseEmitter* origin) override {
-    ASMJIT_UNUSED(err);
-    ASMJIT_UNUSED(origin);
-
+    DebugUtils::unused(err, origin);
     _message.assignString(message);
   }
 
@@ -113,7 +126,7 @@ InstNode* BaseBuilder::newInstNode(uint32_t instId, uint32_t instOptions, const 
 
   node = new(node) InstNode(this, instId, instOptions, opCount, opCapacity);
   node->setOp(0, o0);
-  for (uint32_t i = opCount; i < opCapacity; i++) node->resetOp(i);
+  node->resetOps(opCount, opCapacity);
   return node;
 }
 
@@ -129,7 +142,7 @@ InstNode* BaseBuilder::newInstNode(uint32_t instId, uint32_t instOptions, const 
   node = new(node) InstNode(this, instId, instOptions, opCount, opCapacity);
   node->setOp(0, o0);
   node->setOp(1, o1);
-  for (uint32_t i = opCount; i < opCapacity; i++) node->resetOp(i);
+  node->resetOps(opCount, opCapacity);
   return node;
 }
 
@@ -146,7 +159,7 @@ InstNode* BaseBuilder::newInstNode(uint32_t instId, uint32_t instOptions, const 
   node->setOp(0, o0);
   node->setOp(1, o1);
   node->setOp(2, o2);
-  for (uint32_t i = opCount; i < opCapacity; i++) node->resetOp(i);
+  node->resetOps(opCount, opCapacity);
   return node;
 }
 
@@ -164,7 +177,7 @@ InstNode* BaseBuilder::newInstNode(uint32_t instId, uint32_t instOptions, const 
   node->setOp(1, o1);
   node->setOp(2, o2);
   node->setOp(3, o3);
-  for (uint32_t i = opCount; i < opCapacity; i++) node->resetOp(i);
+  node->resetOps(opCount, opCapacity);
   return node;
 }
 
@@ -642,8 +655,8 @@ Error BaseBuilder::_emit(uint32_t instId, const Operand_& o0, const Operand_& o1
     if (ASMJIT_UNLIKELY(!_code))
       return DebugUtils::errored(kErrorNotInitialized);
 
+#ifndef ASMJIT_NO_VALIDATION
     // Strict validation.
-    #ifndef ASMJIT_NO_VALIDATION
     if (hasEmitterOption(kOptionStrictValidation)) {
       Operand_ opArray[4];
       opArray[0].copyFrom(o0);
@@ -659,7 +672,7 @@ Error BaseBuilder::_emit(uint32_t instId, const Operand_& o0, const Operand_& o1
         return reportError(err);
       }
     }
-    #endif
+#endif
 
     // Clear options that should never be part of `InstNode`.
     options &= ~BaseInst::kOptionReserved;
@@ -669,10 +682,13 @@ Error BaseBuilder::_emit(uint32_t instId, const Operand_& o0, const Operand_& o1
   ASMJIT_ASSERT(opCapacity >= 4);
 
   InstNode* node = _allocator.allocT<InstNode>(InstNode::nodeSizeOfOpCapacity(opCapacity));
+  const char* comment = inlineComment();
+
+  resetInstOptions();
+  resetInlineComment();
+
   if (ASMJIT_UNLIKELY(!node)) {
-    resetInstOptions();
     resetExtraReg();
-    resetInlineComment();
     return reportError(DebugUtils::errored(kErrorOutOfMemory));
   }
 
@@ -682,19 +698,13 @@ Error BaseBuilder::_emit(uint32_t instId, const Operand_& o0, const Operand_& o1
   node->setOp(1, o1);
   node->setOp(2, o2);
   node->setOp(3, o3);
+  node->resetOps(4, opCapacity);
 
-  for (uint32_t i = 4; i < InstNode::kBaseOpCapacity; i++)
-    node->resetOp(i);
-
-  const char* comment = inlineComment();
   if (comment)
     node->setInlineComment(static_cast<char*>(_dataZone.dup(comment, strlen(comment), true)));
 
-  resetInstOptions();
-  resetExtraReg();
-  resetInlineComment();
-
   addNode(node);
+  resetExtraReg();
   return kErrorOk;
 }
 
@@ -711,8 +721,8 @@ Error BaseBuilder::_emit(uint32_t instId, const Operand_& o0, const Operand_& o1
     if (ASMJIT_UNLIKELY(!_code))
       return DebugUtils::errored(kErrorNotInitialized);
 
+#ifndef ASMJIT_NO_VALIDATION
     // Strict validation.
-    #ifndef ASMJIT_NO_VALIDATION
     if (hasEmitterOption(kOptionStrictValidation)) {
       Operand_ opArray[Globals::kMaxOpCount];
       opArray[0].copyFrom(o0);
@@ -730,7 +740,7 @@ Error BaseBuilder::_emit(uint32_t instId, const Operand_& o0, const Operand_& o1
         return reportError(err);
       }
     }
-    #endif
+#endif
 
     // Clear options that should never be part of `InstNode`.
     options &= ~BaseInst::kOptionReserved;
@@ -740,10 +750,13 @@ Error BaseBuilder::_emit(uint32_t instId, const Operand_& o0, const Operand_& o1
   ASMJIT_ASSERT(opCapacity >= opCount);
 
   InstNode* node = _allocator.allocT<InstNode>(InstNode::nodeSizeOfOpCapacity(opCapacity));
+  const char* comment = inlineComment();
+
+  resetInstOptions();
+  resetInlineComment();
+
   if (ASMJIT_UNLIKELY(!node)) {
-    resetInstOptions();
     resetExtraReg();
-    resetInlineComment();
     return reportError(DebugUtils::errored(kErrorOutOfMemory));
   }
 
@@ -758,15 +771,11 @@ Error BaseBuilder::_emit(uint32_t instId, const Operand_& o0, const Operand_& o1
   if (opCapacity > 5)
     node->setOp(5, o5);
 
-  const char* comment = inlineComment();
   if (comment)
     node->setInlineComment(static_cast<char*>(_dataZone.dup(comment, strlen(comment), true)));
 
-  resetInstOptions();
-  resetExtraReg();
-  resetInlineComment();
-
   addNode(node);
+  resetExtraReg();
   return kErrorOk;
 }
 

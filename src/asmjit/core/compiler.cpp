@@ -1,12 +1,27 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#define ASMJIT_EXPORTS
-
-#include "../core/build.h"
+#include "../core/api-build_p.h"
 #ifndef ASMJIT_NO_COMPILER
 
 #include "../core/assembler.h"
@@ -14,6 +29,7 @@
 #include "../core/cpuinfo.h"
 #include "../core/logging.h"
 #include "../core/rapass_p.h"
+#include "../core/rastack_p.h"
 #include "../core/support.h"
 #include "../core/type.h"
 
@@ -30,8 +46,7 @@ class GlobalConstPoolPass : public Pass {
   GlobalConstPoolPass() noexcept : Pass("GlobalConstPoolPass") {}
 
   Error run(Zone* zone, Logger* logger) noexcept override {
-    ASMJIT_UNUSED(zone);
-    ASMJIT_UNUSED(logger);
+    DebugUtils::unused(zone, logger);
 
     // Flush the global constant pool.
     BaseCompiler* compiler = static_cast<BaseCompiler*>(_cb);
@@ -269,7 +284,7 @@ FuncCallNode* BaseCompiler::addCall(uint32_t instId, const Operand_& o0, const F
 // [asmjit::BaseCompiler - Vars]
 // ============================================================================
 
-static void CodeCompiler_assignGenericName(BaseCompiler* self, VirtReg* vReg) {
+static void BaseCompiler_assignGenericName(BaseCompiler* self, VirtReg* vReg) {
   uint32_t index = unsigned(Operand::virtIdToIndex(vReg->_id));
 
   char buf[64];
@@ -295,12 +310,14 @@ VirtReg* BaseCompiler::newVirtReg(uint32_t typeId, uint32_t signature, const cha
 
   vReg = new(vReg) VirtReg(Operand::indexToVirtId(index), signature, size, alignment, typeId);
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (name && name[0] != '\0')
     vReg->_name.setData(&_dataZone, name, SIZE_MAX);
   else
-    CodeCompiler_assignGenericName(this, vReg);
-  #endif
+    BaseCompiler_assignGenericName(this, vReg);
+#else
+  DebugUtils::unused(name);
+#endif
 
   _vRegArray.appendUnsafe(vReg);
   return vReg;
@@ -322,9 +339,14 @@ Error BaseCompiler::_newReg(BaseReg& out, uint32_t typeId, const char* name) {
   return kErrorOk;
 }
 
-Error BaseCompiler::_newReg(BaseReg& out, uint32_t typeId, const char* fmt, va_list ap) {
+Error BaseCompiler::_newRegFmt(BaseReg& out, uint32_t typeId, const char* fmt, ...) {
+  va_list ap;
   StringTmp<256> sb;
+
+  va_start(ap, fmt);
   sb.appendVFormat(fmt, ap);
+  va_end(ap);
+
   return _newReg(out, typeId, sb.data());
 }
 
@@ -403,9 +425,14 @@ Error BaseCompiler::_newReg(BaseReg& out, const BaseReg& ref, const char* name) 
   return kErrorOk;
 }
 
-Error BaseCompiler::_newReg(BaseReg& out, const BaseReg& ref, const char* fmt, va_list ap) {
+Error BaseCompiler::_newRegFmt(BaseReg& out, const BaseReg& ref, const char* fmt, ...) {
+  va_list ap;
   StringTmp<256> sb;
+
+  va_start(ap, fmt);
   sb.appendVFormat(fmt, ap);
+  va_end(ap);
+
   return _newReg(out, ref, sb.data());
 }
 
@@ -434,6 +461,35 @@ Error BaseCompiler::_newStack(BaseMem& out, uint32_t size, uint32_t alignment, c
 
   // Set the memory operand to GPD/GPQ and its id to VirtReg.
   out = BaseMem(BaseMem::Decomposed { _gpRegInfo.type(), vReg->id(), BaseReg::kTypeNone, 0, 0, 0, BaseMem::kSignatureMemRegHomeFlag });
+  return kErrorOk;
+}
+
+Error BaseCompiler::setStackSize(uint32_t virtId, uint32_t newSize, uint32_t newAlignment) noexcept {
+  if (!isVirtIdValid(virtId))
+    return DebugUtils::errored(kErrorInvalidVirtId);
+
+  if (newAlignment && !Support::isPowerOf2(newAlignment))
+    return reportError(DebugUtils::errored(kErrorInvalidArgument));
+
+  if (newAlignment > 64)
+    newAlignment = 64;
+
+  VirtReg* vReg = virtRegById(virtId);
+  if (newSize)
+    vReg->_virtSize = newSize;
+
+  if (newAlignment)
+    vReg->_alignment = uint8_t(newAlignment);
+
+  // This is required if the RAPass is already running. There is a chance that
+  // a stack-slot has been already allocated and in that case it has to be
+  // updated as well, otherwise we would allocate wrong amount of memory.
+  RAWorkReg* workReg = vReg->_workReg;
+  if (workReg && workReg->_stackSlot) {
+    workReg->_stackSlot->_size = vReg->_virtSize;
+    workReg->_stackSlot->_alignment = vReg->_alignment;
+  }
+
   return kErrorOk;
 }
 
@@ -472,7 +528,7 @@ Error BaseCompiler::_newConst(BaseMem& out, uint32_t scope, const void* data, si
   return kErrorOk;
 }
 
-void BaseCompiler::rename(BaseReg& reg, const char* fmt, ...) {
+void BaseCompiler::rename(const BaseReg& reg, const char* fmt, ...) {
   if (!reg.isVirtReg()) return;
 
   VirtReg* vReg = virtRegById(reg.id());
@@ -489,8 +545,65 @@ void BaseCompiler::rename(BaseReg& reg, const char* fmt, ...) {
     vReg->_name.setData(&_dataZone, buf, SIZE_MAX);
   }
   else {
-    CodeCompiler_assignGenericName(this, vReg);
+    BaseCompiler_assignGenericName(this, vReg);
   }
+}
+
+// ============================================================================
+// [asmjit::BaseCompiler - Jump Annotations]
+// ============================================================================
+
+JumpNode* BaseCompiler::newJumpNode(uint32_t instId, uint32_t instOptions, const Operand_& o0, JumpAnnotation* annotation) noexcept {
+  uint32_t opCount = 1;
+  JumpNode* node = _allocator.allocT<JumpNode>();
+  if (ASMJIT_UNLIKELY(!node))
+    return nullptr;
+
+  node = new(node) JumpNode(this, instId, instOptions, opCount, annotation);
+  node->setOp(0, o0);
+  node->resetOps(opCount, JumpNode::kBaseOpCapacity);
+  return node;
+}
+
+Error BaseCompiler::emitAnnotatedJump(uint32_t instId, const Operand_& o0, JumpAnnotation* annotation) {
+  uint32_t options = instOptions() | globalInstOptions();
+  const char* comment = inlineComment();
+
+  JumpNode* node = newJumpNode(instId, options, o0, annotation);
+
+  resetInstOptions();
+  resetInlineComment();
+
+  if (ASMJIT_UNLIKELY(!node)) {
+    resetExtraReg();
+    return reportError(DebugUtils::errored(kErrorOutOfMemory));
+  }
+
+  node->setExtraReg(extraReg());
+  if (comment)
+    node->setInlineComment(static_cast<char*>(_dataZone.dup(comment, strlen(comment), true)));
+
+  addNode(node);
+  resetExtraReg();
+  return kErrorOk;
+}
+
+JumpAnnotation* BaseCompiler::newJumpAnnotation() {
+  if (_jumpAnnotations.grow(&_allocator, 1) != kErrorOk) {
+    reportError(DebugUtils::errored(kErrorOutOfMemory));
+    return nullptr;
+  }
+
+  uint32_t id = _jumpAnnotations.size();
+  JumpAnnotation* jumpAnnotation = _allocator.newT<JumpAnnotation>(this, id);
+
+  if (!jumpAnnotation) {
+    reportError(DebugUtils::errored(kErrorOutOfMemory));
+    return nullptr;
+  }
+
+  _jumpAnnotations.appendUnsafe(jumpAnnotation);
+  return jumpAnnotation;
 }
 
 // ============================================================================

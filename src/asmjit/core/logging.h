@@ -1,11 +1,28 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef _ASMJIT_CORE_LOGGING_H
-#define _ASMJIT_CORE_LOGGING_H
+#ifndef ASMJIT_CORE_LOGGING_H_INCLUDED
+#define ASMJIT_CORE_LOGGING_H_INCLUDED
 
 #include "../core/inst.h"
 #include "../core/string.h"
@@ -41,25 +58,25 @@ public:
   uint8_t _indentation[4];
 
   enum Flags : uint32_t {
-    //!< Show also binary form of each logged instruction (assembler).
+    //! Show also binary form of each logged instruction (assembler).
     kFlagMachineCode = 0x00000001u,
-    //!< Show a text explanation of some immediate values.
+    //! Show a text explanation of some immediate values.
     kFlagExplainImms = 0x00000002u,
-    //!< Use hexadecimal notation of immediate values.
+    //! Use hexadecimal notation of immediate values.
     kFlagHexImms = 0x00000004u,
-    //!< Use hexadecimal notation of address offsets.
+    //! Use hexadecimal notation of address offsets.
     kFlagHexOffsets = 0x00000008u,
-    //!< Show casts between virtual register types (compiler).
+    //! Show casts between virtual register types (compiler).
     kFlagRegCasts = 0x00000010u,
-    //!< Show positions associated with nodes (compiler).
+    //! Show positions associated with nodes (compiler).
     kFlagPositions = 0x00000020u,
-    //!< Annotate nodes that are lowered by passes.
+    //! Annotate nodes that are lowered by passes.
     kFlagAnnotations = 0x00000040u,
 
     // TODO: These must go, keep this only for formatting.
-    //!< Show an additional output from passes.
+    //! Show an additional output from passes.
     kFlagDebugPasses = 0x00000080u,
-    //!< Show an additional output from RA.
+    //! Show an additional output from RA.
     kFlagDebugRA = 0x00000100u
   };
 
@@ -307,16 +324,16 @@ struct Logging {
     String& sb,
     uint32_t typeId) noexcept;
 
-  #ifndef ASMJIT_NO_BUILDER
+#ifndef ASMJIT_NO_BUILDER
   ASMJIT_API static Error formatNode(
     String& sb,
     uint32_t flags,
     const BaseBuilder* cb,
     const BaseNode* node_) noexcept;
-  #endif
+#endif
 
   // Only used by AsmJit internals, not available to users.
-  #if defined(ASMJIT_EXPORTS)
+#ifdef ASMJIT_EXPORTS
   enum {
     // Has to be big to be able to hold all metadata compiler can assign to a
     // single instruction.
@@ -327,7 +344,7 @@ struct Logging {
   static Error formatLine(
     String& sb,
     const uint8_t* binData, size_t binSize, size_t dispSize, size_t immSize, const char* comment) noexcept;
-  #endif
+#endif
 };
 #endif
 
@@ -335,4 +352,4 @@ struct Logging {
 
 ASMJIT_END_NAMESPACE
 
-#endif // _ASMJIT_CORE_LOGGER_H
+#endif // ASMJIT_CORE_LOGGER_H_INCLUDED

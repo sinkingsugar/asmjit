@@ -1,11 +1,27 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#define ASMJIT_EXPORTS
-
+#include "../core/api-build_p.h"
 #include "../core/assembler.h"
 #include "../core/codebufferwriter_p.h"
 #include "../core/constpool.h"
@@ -83,10 +99,10 @@ Error BaseAssembler::section(Section* section) {
   if (!_code->isSectionValid(section->id()) || _code->_sections[section->id()] != section)
     return reportError(DebugUtils::errored(kErrorInvalidSection));
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (hasEmitterOption(kOptionLoggingEnabled))
     _code->_logger->logf(".section %s {#%u}\n", section->name(), section->id());
-  #endif
+#endif
 
   BaseAssembler_initSection(this, section);
   return kErrorOk;
@@ -126,10 +142,10 @@ Error BaseAssembler::bind(const Label& label) {
 
   Error err = _code->bindLabel(label, _section->id(), offset());
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (hasEmitterOption(kOptionLoggingEnabled))
     BaseAssembler_logLabel(this, label);
-  #endif
+#endif
 
   resetInlineComment();
   if (err)
@@ -244,6 +260,12 @@ Error BaseAssembler::_emitFailed(
   }
 
   Logging::formatInstruction(sb, 0, this, archId(), BaseInst(instId, options, _extraReg), operands, Globals::kMaxOpCount);
+
+  if (inlineComment()) {
+    sb.appendString(" ; ");
+    sb.appendString(inlineComment());
+  }
+
   resetInstOptions();
   resetExtraReg();
   resetInlineComment();
@@ -255,6 +277,7 @@ Error BaseAssembler::_emitFailed(
 // [asmjit::BaseAssembler - Embed]
 // ============================================================================
 
+#ifndef ASMJIT_NO_LOGGING
 struct DataSizeByPower {
   char str[4];
 };
@@ -265,6 +288,7 @@ static const DataSizeByPower dataSizeByPowerTable[] = {
   { "dd" },
   { "dq" }
 };
+#endif
 
 Error BaseAssembler::embed(const void* data, uint32_t dataSize) {
   if (ASMJIT_UNLIKELY(!_code))
@@ -278,10 +302,10 @@ Error BaseAssembler::embed(const void* data, uint32_t dataSize) {
 
   writer.emitData(data, dataSize);
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (ASMJIT_UNLIKELY(hasEmitterOption(kOptionLoggingEnabled)))
     _code->_logger->logBinary(data, dataSize);
-  #endif
+#endif
 
   writer.done(this);
   return kErrorOk;
@@ -304,7 +328,7 @@ Error BaseAssembler::embedLabel(const Label& label) {
   CodeBufferWriter writer(this);
   ASMJIT_PROPAGATE(writer.ensureSpace(this, dataSize));
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (ASMJIT_UNLIKELY(hasEmitterOption(kOptionLoggingEnabled))) {
     StringTmp<256> sb;
     sb.appendFormat(".%s ", dataSizeByPowerTable[Support::ctz(dataSize)].str);
@@ -312,7 +336,7 @@ Error BaseAssembler::embedLabel(const Label& label) {
     sb.appendChar('\n');
     _code->_logger->log(sb);
   }
-  #endif
+#endif
 
   // TODO: Does it make sense to calculate the address here if everything is known?
   /*
@@ -366,7 +390,7 @@ Error BaseAssembler::embedLabelDelta(const Label& label, const Label& base, uint
   CodeBufferWriter writer(this);
   ASMJIT_PROPAGATE(writer.ensureSpace(this, dataSize));
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (ASMJIT_UNLIKELY(hasEmitterOption(kOptionLoggingEnabled))) {
     StringTmp<256> sb;
     sb.appendFormat(".%s (", dataSizeByPowerTable[Support::ctz(dataSize)].str);
@@ -376,7 +400,7 @@ Error BaseAssembler::embedLabelDelta(const Label& label, const Label& base, uint
     sb.appendString(")\n");
     _code->_logger->log(sb);
   }
-  #endif
+#endif
 
   // If both labels are bound within the same section it means the delta can be calculated now.
   if (labelEntry->isBound() && baseEntry->isBound() && labelEntry->section() == baseEntry->section()) {
@@ -425,10 +449,10 @@ Error BaseAssembler::embedConstPool(const Label& label, const ConstPool& pool) {
 
   pool.fill(writer.cursor());
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (ASMJIT_UNLIKELY(hasEmitterOption(kOptionLoggingEnabled)))
     _code->_logger->logBinary(writer.cursor(), size);
-  #endif
+#endif
 
   writer.advance(size);
   writer.done(this);
@@ -444,17 +468,16 @@ Error BaseAssembler::comment(const char* data, size_t size) {
   if (ASMJIT_UNLIKELY(!_code))
     return DebugUtils::errored(kErrorNotInitialized);
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (hasEmitterOption(kOptionLoggingEnabled)) {
     Logger* logger = _code->logger();
     logger->log(data, size);
     logger->log("\n", 1);
     return kErrorOk;
   }
-  #else
-  ASMJIT_UNUSED(data);
-  ASMJIT_UNUSED(size);
-  #endif
+#else
+  DebugUtils::unused(data, size);
+#endif
 
   return kErrorOk;
 }

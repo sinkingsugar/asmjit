@@ -1,7 +1,7 @@
 AsmJit
 ------
 
-Complete x86/x64 JIT and AOT Assembler for C++.
+Machine code generation for C++.
 
   * [Official Repository (asmjit/asmjit)](https://github.com/asmjit/asmjit)
   * [Official Blog (asmbits)](https://asmbits.blogspot.com/ncr)
@@ -113,7 +113,7 @@ Supported Environments
     * **Clang** - tested by Travis-CI - Clang 3.9+ (with C++11 enabled) is officially supported (older Clang versions having C++11 support are probably fine, but are not regularly tested).
     * **GNU** - tested by Travis-CI - GCC 4.8+ (with C++11 enabled) is officially supported.
     * **MINGW** - tested by Travis-CI - Use the latest version, if possible.
-    * **MSVC** - tested by Travis-CI - **MSVC2017+ only!** - there is a severe bug in MSVC2015's `constexpr` implementation that makes that compiler unusable.
+    * **MSVC** - tested by Travis-CI - VS2017+ is officially supported, VS2015 is reported to work.
   * Untested:
     * **Intel** - no maintainers and no CI environment to regularly test this compiler.
     * Other c++ compilers would require basic support in [core/build.h](./src/asmjit/core/build.h).
@@ -1460,6 +1460,87 @@ static void exampleUseOfConstPool(x86::Compiler& cc) {
 }
 ```
 
+### Jump Tables
+
+**Compiler** supports `jmp` instruction with reg/mem operand, which is a commonly used pattern to implement indirect jumps within a function, for example to implement `switch()` statement in a programming languages. By default AsmJit assumes that every basic block can be a possible jump target as it's unable to deduce targets from instruction's operands. This is a very pessimistic default that should be avoided if possible as it's costly and very unfriendly to liveness analysis and register allocation. So instead of relying on such pessimistic default, use **JumpAnnotation** to annotate indirect jumps:
+
+```c++
+#include <asmjit/asmjit.h>
+
+using namespace asmjit;
+
+static void exampleUseOfIndirectJump(x86::Compiler& cc) {
+    cc.addFunc(FuncSignatureT<float, float, float, uint32_t>(CallConv::kIdHost));
+
+    // Function arguments
+    x86::Xmm a = cc.newXmmSs("a");
+    x86::Xmm b = cc.newXmmSs("b");
+    x86::Gp op = cc.newUInt32("op");
+
+    x86::Gp target = cc.newIntPtr("target");
+    x86::Gp offset = cc.newIntPtr("offset");
+
+    Label L_Table = cc.newLabel();
+    Label L_Add = cc.newLabel();
+    Label L_Sub = cc.newLabel();
+    Label L_Mul = cc.newLabel();
+    Label L_Div = cc.newLabel();
+    Label L_End = cc.newLabel();
+
+    cc.setArg(0, a);
+    cc.setArg(1, b);
+    cc.setArg(2, op);
+
+    // Jump annotation is a building block that allows to annotate all
+    // possible targets where `jmp()` can jump. It then drives the CFG
+    // contruction and liveness analysis, which impacts register allocation.
+    JumpAnnotation* annotation = cc.newJumpAnnotation();
+    annotation->addLabel(L_Add);
+    annotation->addLabel(L_Sub);
+    annotation->addLabel(L_Mul);
+    annotation->addLabel(L_Div);
+
+    // Most likely not the common indirect jump approach, but it
+    // doesn't really matter how final address is calculated. The
+    // most important path using JumpAnnotation with `jmp()`.
+    cc.lea(offset, x86::ptr(L_Table));
+    if (cc.is64Bit())
+      cc.movsxd(target, x86::dword_ptr(offset, op.cloneAs(offset), 2));
+    else
+      cc.mov(target, x86::dword_ptr(offset, op.cloneAs(offset), 2));
+    cc.add(target, offset);
+    cc.jmp(target, annotation);
+
+    // Acts like a switch() statement in C.
+    cc.bind(L_Add);
+    cc.addss(a, b);
+    cc.jmp(L_End);
+
+    cc.bind(L_Sub);
+    cc.subss(a, b);
+    cc.jmp(L_End);
+
+    cc.bind(L_Mul);
+    cc.mulss(a, b);
+    cc.jmp(L_End);
+
+    cc.bind(L_Div);
+    cc.divss(a, b);
+
+    cc.bind(L_End);
+    cc.ret(a);
+
+    cc.endFunc();
+
+    // Relative int32_t offsets of `L_XXX - L_Table`.
+    cc.bind(L_Table);
+    cc.embedLabelDelta(L_Add, L_Table, 4);
+    cc.embedLabelDelta(L_Sub, L_Table, 4);
+    cc.embedLabelDelta(L_Mul, L_Table, 4);
+    cc.embedLabelDelta(L_Div, L_Table, 4);
+}
+```
+
 
 Advanced Features
 -----------------
@@ -1784,21 +1865,22 @@ a.add(x86::ebx, x86::eax); // Emits in .text section.
 a.lea(x86::rsi, x86::ptr(L_Data));
 ```
 
-The last line in the example above shows that a LabelLink would be created even for bound labels that cross sections. In this case a referenced label was bound in another section, which means that the link couldn't be resolved at that moment. If your code uses sections, but you wish AsmJit to flatten these sections (you don't plan to flatten then manually) then there is an API for that.
+The last line in the example above shows that a LabelLink would be created even for bound labels that cross sections. In this case a referenced label was bound in another section, which means that the link couldn't be resolved at that moment. If your code uses sections, but you wish AsmJit to flatten these sections (you don't plan to flatten them manually) then there is an API for that.
 
 ```c++
 // ... (continuing the previous example) ...
 CodeHolder code = ...;
 
 // Suppose we have some code that contains multiple sections and
-// we would like to flatten it by using AsmJit's built-in API:
+// we would like to flatten them by using AsmJit's built-in API:
 Error err = code.flatten();
 if (err) { /* Error handling is necessary. */ }
 
 // After flattening all sections would contain assigned offsets
 // relative to base. Offsets are 64-bit unsigned integers so we
-// cast it to `unsigned int` for simplicity here...
-printf("Data section offset %u", unsigned(data->offset()));
+// cast them to `size_t` for simplicity. On 32-bit targets it's
+// guaranteed that the offset cannot be greater than `2^32 - 1`.
+printf("Data section offset %zu", size_t(data->offset()));
 
 // The flattening doesn't resolve unresolved label links, this
 // has to be done manually as flattening can be done separately.

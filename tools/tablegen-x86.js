@@ -1,8 +1,25 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
 // ============================================================================
 // tablegen-x86.js
@@ -189,6 +206,7 @@ class GenUtils {
       if (dbInst.attributes.Lock      ) f.Lock       = true;
       if (dbInst.attributes.XAcquire  ) f.XAcquire   = true;
       if (dbInst.attributes.XRelease  ) f.XRelease   = true;
+      if (dbInst.attributes.BND       ) f.Rep        = true;
       if (dbInst.attributes.REP       ) f.Rep        = true;
       if (dbInst.attributes.REPNE     ) f.Rep        = true;
       if (dbInst.attributes.RepIgnored) f.RepIgnored = true;
@@ -291,6 +309,7 @@ class GenUtils {
       case "xorps"   : case "vxorps" :
 
       case "sub"     :
+      case "sbb"     :
       case "psubb"   : case "vpsubb" :
       case "psubw"   : case "vpsubw" :
       case "psubd"   : case "vpsubd" :
@@ -620,7 +639,6 @@ class X86TableGen extends core.TableGen {
     this.merge();
     this.save();
     this.dumpTableSizes();
-
     this.printMissing();
   }
 }
@@ -713,7 +731,7 @@ class AltOpcodeTable extends core.Task {
       }
 
       // X(______,OP,_,_,_,_,_,_  )
-      if (opcode.startsWith("O_FPU(") || opcode.startsWith("O(") || opcode.startsWith("V(")) {
+      if (opcode.startsWith("O_FPU(") || opcode.startsWith("O(") || opcode.startsWith("V(") || opcode.startsWith("E(")) {
         var value = opcode.substring(9, 11);
         var remaining = opcode.substring(0, 9) + "00" + opcode.substring(11);
 

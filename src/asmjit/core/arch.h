@@ -1,11 +1,28 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef _ASMJIT_CORE_ARCH_H
-#define _ASMJIT_CORE_ARCH_H
+#ifndef ASMJIT_CORE_ARCH_H_INCLUDED
+#define ASMJIT_CORE_ARCH_H_INCLUDED
 
 #include "../core/globals.h"
 #include "../core/operand.h"
@@ -68,19 +85,19 @@ public:
     // ARM sub-types.
     kSubIdA32_Thumb    = 8,              //!< THUMB|THUMBv2 sub-type (only ARM in 32-bit mode).
 
-    #if   (ASMJIT_ARCH_X86) && defined(__AVX512VL__)
+#if   (ASMJIT_ARCH_X86) && defined(__AVX512VL__)
     kSubIdHost = kSubIdX86_AVX512VL
-    #elif (ASMJIT_ARCH_X86) && defined(__AVX512F__)
+#elif (ASMJIT_ARCH_X86) && defined(__AVX512F__)
     kSubIdHost = kSubIdX86_AVX512
-    #elif (ASMJIT_ARCH_X86) && defined(__AVX2__)
+#elif (ASMJIT_ARCH_X86) && defined(__AVX2__)
     kSubIdHost = kSubIdX86_AVX2
-    #elif (ASMJIT_ARCH_X86) && defined(__AVX__)
+#elif (ASMJIT_ARCH_X86) && defined(__AVX__)
     kSubIdHost = kSubIdX86_AVX
-    #elif (ASMJIT_ARCH_ARM == 32) && (defined(_M_ARMT) || defined(__thumb__) || defined(__thumb2__))
+#elif (ASMJIT_ARCH_ARM == 32) && (defined(_M_ARMT) || defined(__thumb__) || defined(__thumb2__))
     kSubIdHost = kSubIdA32_Thumb
-    #else
+#else
     kSubIdHost = 0
-    #endif
+#endif
   };
 
   //! \name Construction & Destruction
@@ -184,4 +201,4 @@ struct ArchUtils {
 
 ASMJIT_END_NAMESPACE
 
-#endif // _ASMJIT_CORE_ARCH_H
+#endif // ASMJIT_CORE_ARCH_H_INCLUDED

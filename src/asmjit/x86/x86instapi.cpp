@@ -1,8 +1,25 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
 // ----------------------------------------------------------------------------
 // IMPORTANT: AsmJit now uses an external instruction database to populate
@@ -22,9 +39,7 @@
 // (including registers and flags), and all indexes to all tables.
 // ----------------------------------------------------------------------------
 
-#define ASMJIT_EXPORTS
-
-#include "../core/build.h"
+#include "../core/api-build_p.h"
 #ifdef ASMJIT_BUILD_X86
 
 #include "../core/cpuinfo.h"
@@ -44,7 +59,7 @@ ASMJIT_BEGIN_SUB_NAMESPACE(x86)
 
 #ifndef ASMJIT_NO_TEXT
 Error InstInternal::instIdToString(uint32_t archId, uint32_t instId, String& output) noexcept {
-  ASMJIT_UNUSED(archId);
+  DebugUtils::unused(archId);
 
   if (ASMJIT_UNLIKELY(!Inst::isDefinedId(instId)))
     return DebugUtils::errored(kErrorInvalidInstruction);
@@ -54,7 +69,7 @@ Error InstInternal::instIdToString(uint32_t archId, uint32_t instId, String& out
 }
 
 uint32_t InstInternal::stringToInstId(uint32_t archId, const char* s, size_t len) noexcept {
-  ASMJIT_UNUSED(archId);
+  DebugUtils::unused(archId);
 
   if (ASMJIT_UNLIKELY(!s))
     return Inst::kIdNone;
@@ -761,7 +776,7 @@ static ASMJIT_INLINE void rwZeroExtendGp(OpRWInfo& opRwInfo, const Gp& reg, uint
 }
 
 static ASMJIT_INLINE void rwZeroExtendAvxVec(OpRWInfo& opRwInfo, const Vec& reg) noexcept {
-  ASMJIT_UNUSED(reg);
+  DebugUtils::unused(reg);
 
   uint64_t msk = ~Support::fillTrailingBits(opRwInfo.writeByteMask());
   if (msk) {
@@ -1346,7 +1361,7 @@ static RegAnalysis InstInternal_regAnalysis(const Operand_* operands, uint32_t o
 
 Error InstInternal::queryFeatures(uint32_t archId, const BaseInst& inst, const Operand_* operands, uint32_t opCount, BaseFeatures& out) noexcept {
   // Only called when `archId` matches X86 family.
-  ASMJIT_UNUSED(archId);
+  DebugUtils::unused(archId);
   ASMJIT_ASSERT(ArchInfo::isX86Family(archId));
 
   // Get the instruction data.
@@ -1457,11 +1472,32 @@ Error InstInternal::queryFeatures(uint32_t archId, const BaseInst& inst, const O
         uint32_t hasKMask = inst.extraReg().type() == Reg::kTypeKReg;
         uint32_t hasKOrZmm = regAnalysis.regTypeMask & Support::bitMask(Reg::kTypeZmm, Reg::kTypeKReg);
 
-        // Special case: VPSLLDQ and VPSRLDQ instructions only allow `reg, reg. imm`
-        // combination in AVX|AVX2 mode, then AVX-512 introduced `reg, reg/mem, imm`
-        // combination that uses EVEX prefix. This means that if the second operand
-        // is memory then this is AVX-512_BW instruction and not AVX/AVX2 instruction.
-        uint32_t mustUseEvex = (instId == Inst::kIdVpslldq || instId == Inst::kIdVpsrldq) && opCount >= 2 && operands[1].isMem();
+        uint32_t mustUseEvex = 0;
+
+        switch (instId) {
+          // Special case: VPSLLDQ and VPSRLDQ instructions only allow `reg, reg. imm`
+          // combination in AVX|AVX2 mode, then AVX-512 introduced `reg, reg/mem, imm`
+          // combination that uses EVEX prefix. This means that if the second operand
+          // is memory then this is AVX-512_BW instruction and not AVX/AVX2 instruction.
+          case Inst::kIdVpslldq:
+          case Inst::kIdVpsrldq:
+            mustUseEvex = opCount >= 2 && operands[1].isMem();
+            break;
+
+          // Special case: VPBROADCAST[B|D|Q|W] only supports r32/r64 with EVEX prefix.
+          case Inst::kIdVpbroadcastb:
+          case Inst::kIdVpbroadcastd:
+          case Inst::kIdVpbroadcastq:
+          case Inst::kIdVpbroadcastw:
+            mustUseEvex = opCount >= 2 && x86::Reg::isGp(operands[1]);
+            break;
+
+          // Special case: VPERMPD only supports YMM predicate in AVX mode, immediate
+          // precicate is only supported by AVX512-F and newer.
+          case Inst::kIdVpermpd:
+            mustUseEvex = opCount >= 3 && !operands[2].isImm();
+            break;
+        }
 
         if (!(hasEvex | mustUseEvex | hasKMask | hasKOrZmm | regAnalysis.highVecUsed))
           out.remove(Features::kAVX512_F, Features::kAVX512_BW, Features::kAVX512_DQ, Features::kAVX512_VL);
@@ -1484,7 +1520,7 @@ Error InstInternal::queryFeatures(uint32_t archId, const BaseInst& inst, const O
 // ============================================================================
 
 #if defined(ASMJIT_TEST)
-UNIT(asmjit_x86_inst_api_text) {
+UNIT(x86_inst_api_text) {
   // All known instructions should be matched.
   INFO("Matching all X86 instructions");
   for (uint32_t a = 1; a < Inst::_kIdCount; a++) {

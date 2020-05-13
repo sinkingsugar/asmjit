@@ -1,13 +1,30 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef _ASMJIT_CORE_GLOBALS_H
-#define _ASMJIT_CORE_GLOBALS_H
+#ifndef ASMJIT_CORE_GLOBALS_H_INCLUDED
+#define ASMJIT_CORE_GLOBALS_H_INCLUDED
 
-#include "../core/build.h"
+#include "../core/api-config.h"
 
 ASMJIT_BEGIN_NAMESPACE
 
@@ -21,7 +38,7 @@ ASMJIT_BEGIN_NAMESPACE
 namespace Support {
   //! Cast designed to cast between function and void* pointers.
   template<typename Dst, typename Src>
-  static constexpr Dst ptr_cast_impl(Src p) noexcept { return (Dst)p; }
+  static inline Dst ptr_cast_impl(Src p) noexcept { return (Dst)p; }
 } // {Support}
 
 #if defined(ASMJIT_NO_STDCXX)
@@ -342,9 +359,9 @@ namespace ByteOrder {
 // ============================================================================
 
 template<typename Func>
-static constexpr Func ptr_as_func(void* func) noexcept { return Support::ptr_cast_impl<Func, void*>(func); }
+static inline Func ptr_as_func(void* func) noexcept { return Support::ptr_cast_impl<Func, void*>(func); }
 template<typename Func>
-static constexpr void* func_as_ptr(Func func) noexcept { return Support::ptr_cast_impl<void*, Func>(func); }
+static inline void* func_as_ptr(Func func) noexcept { return Support::ptr_cast_impl<void*, Func>(func); }
 
 // ============================================================================
 // [asmjit::DebugUtils]
@@ -352,6 +369,10 @@ static constexpr void* func_as_ptr(Func func) noexcept { return Support::ptr_cas
 
 //! Debugging utilities.
 namespace DebugUtils {
+
+//! Used to silence warnings about unused arguments or variables.
+template<typename... Args>
+static ASMJIT_INLINE void unused(Args&&...) noexcept {}
 
 //! Returns the error `err` passed.
 //!
@@ -401,4 +422,4 @@ ASMJIT_API void ASMJIT_NORETURN assertionFailed(const char* file, int line, cons
 
 ASMJIT_END_NAMESPACE
 
-#endif // _ASMJIT_CORE_GLOBALS_H
+#endif // ASMJIT_CORE_GLOBALS_H_INCLUDED

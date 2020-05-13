@@ -1,12 +1,27 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#define ASMJIT_EXPORTS
-
-#include "../core/build.h"
+#include "../core/api-build_p.h"
 #if defined(ASMJIT_BUILD_X86) && !defined(ASMJIT_NO_COMPILER)
 
 #include "../core/cpuinfo.h"
@@ -84,7 +99,8 @@ public:
     : RACFGBuilder<X86RACFGBuilder>(pass),
       _archId(pass->cc()->archId()),
       _is64Bit(pass->gpSize() == 8),
-      _avxEnabled(pass->_avxEnabled) {}
+      _avxEnabled(pass->_avxEnabled) {
+  }
 
   inline Compiler* cc() const noexcept { return static_cast<Compiler*>(_cc); }
 
@@ -175,7 +191,7 @@ Error X86RACFGBuilder::onInst(InstNode* inst, uint32_t& controlType, RAInstBuild
               }
             }
 
-            // Do not use RegMem flag if chaning Reg to Mem requires additional
+            // Do not use RegMem flag if changing Reg to Mem requires additional
             // CPU feature that may not be enabled.
             if (rwInfo.rmFeature() && (flags & (RATiedReg::kUseRM | RATiedReg::kOutRM))) {
               flags &= ~(RATiedReg::kUseRM | RATiedReg::kOutRM);
@@ -274,9 +290,9 @@ Error X86RACFGBuilder::onInst(InstNode* inst, uint32_t& controlType, RAInstBuild
               uint32_t outRewriteMask = 0;
 
               if (flags & RATiedReg::kUse)
-                useRewriteMask = Support::bitMask(inst->getRewriteIndex(&mem._mem.indexId));
+                useRewriteMask = Support::bitMask(inst->getRewriteIndex(&mem._data[Operand::kDataMemIndexId]));
               else
-                outRewriteMask = Support::bitMask(inst->getRewriteIndex(&mem._mem.indexId));
+                outRewriteMask = Support::bitMask(inst->getRewriteIndex(&mem._data[Operand::kDataMemIndexId]));
 
               ASMJIT_PROPAGATE(ib.add(workReg, RATiedReg::kUse | RATiedReg::kRead, allocable, useId, useRewriteMask, outId, outRewriteMask));
             }
@@ -315,9 +331,8 @@ Error X86RACFGBuilder::onInst(InstNode* inst, uint32_t& controlType, RAInstBuild
 
     // Handle X86 constraints.
     if (hasGpbHiConstraint) {
-      for (uint32_t i = 0; i < ib.tiedRegCount(); i++) {
-        RATiedReg* tiedReg = ib[i];
-        tiedReg->_allocableRegs &= tiedReg->hasFlag(RATiedReg::kX86Gpb) ? 0x0Fu : 0xFFu;
+      for (RATiedReg& tiedReg : ib) {
+        tiedReg._allocableRegs &= tiedReg.hasFlag(RATiedReg::kX86Gpb) ? 0x0Fu : 0xFFu;
       }
     }
 
@@ -575,7 +590,7 @@ Error X86RACFGBuilder::onCall(FuncCallNode* call, RAInstBuilder& ib) noexcept {
 // ============================================================================
 
 Error X86RACFGBuilder::moveImmToRegArg(FuncCallNode* call, const FuncValue& arg, const Imm& imm_, BaseReg* out) noexcept {
-  ASMJIT_UNUSED(call);
+  DebugUtils::unused(call);
   ASMJIT_ASSERT(arg.isReg());
 
   Imm imm(imm_);
@@ -619,7 +634,7 @@ MovU32:
 // ============================================================================
 
 Error X86RACFGBuilder::moveImmToStackArg(FuncCallNode* call, const FuncValue& arg, const Imm& imm_) noexcept {
-  ASMJIT_UNUSED(call);
+  DebugUtils::unused(call);
   ASMJIT_ASSERT(arg.isStack());
 
   Mem mem = ptr(_pass->_sp.as<Gp>(), arg.stackOffset());
@@ -681,7 +696,7 @@ MovU32:
 // ============================================================================
 
 Error X86RACFGBuilder::moveRegToStackArg(FuncCallNode* call, const FuncValue& arg, const BaseReg& reg) noexcept {
-  ASMJIT_UNUSED(call);
+  DebugUtils::unused(call);
   ASMJIT_ASSERT(arg.isStack());
 
   Mem mem = ptr(_pass->_sp.as<Gp>(), arg.stackOffset());
@@ -1000,6 +1015,9 @@ void X86RAPass::onInit() noexcept {
   _availableRegs[Reg::kGroupMm  ] = Support::lsbMask<uint32_t>(_physRegCount.get(Reg::kGroupMm  ));
   _availableRegs[Reg::kGroupKReg] = Support::lsbMask<uint32_t>(_physRegCount.get(Reg::kGroupKReg));
 
+  _scratchRegIndexes[0] = uint8_t(Gp::kIdCx);
+  _scratchRegIndexes[1] = uint8_t(baseRegCount - 1);
+
   // The architecture specific setup makes implicitly all registers available. So
   // make unavailable all registers that are special and cannot be used in general.
   bool hasFP = _func->frame().hasPreservedFP();
@@ -1033,12 +1051,12 @@ Error X86RAPass::onEmitMove(uint32_t workId, uint32_t dstPhysId, uint32_t srcPhy
 
   const char* comment = nullptr;
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (_loggerFlags & FormatOptions::kFlagAnnotations) {
     _tmpString.assignFormat("<MOVE> %s", workRegById(workId)->name());
     comment = _tmpString.data();
   }
-  #endif
+#endif
 
   return X86Internal::emitRegMove(cc()->as<Emitter>(), dst, src, wReg->typeId(), _avxEnabled, comment);
 }
@@ -1051,12 +1069,12 @@ Error X86RAPass::onEmitSwap(uint32_t aWorkId, uint32_t aPhysId, uint32_t bWorkId
   uint32_t sign = is64Bit ? uint32_t(RegTraits<Reg::kTypeGpq>::kSignature)
                           : uint32_t(RegTraits<Reg::kTypeGpd>::kSignature);
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (_loggerFlags & FormatOptions::kFlagAnnotations) {
     _tmpString.assignFormat("<SWAP> %s, %s", waReg->name(), wbReg->name());
     cc()->setInlineComment(_tmpString.data());
   }
-  #endif
+#endif
 
   return cc()->emit(Inst::kIdXchg, Reg(sign, aPhysId), Reg(sign, bPhysId));
 }
@@ -1068,12 +1086,12 @@ Error X86RAPass::onEmitLoad(uint32_t workId, uint32_t dstPhysId) noexcept {
 
   const char* comment = nullptr;
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (_loggerFlags & FormatOptions::kFlagAnnotations) {
     _tmpString.assignFormat("<LOAD> %s", workRegById(workId)->name());
     comment = _tmpString.data();
   }
-  #endif
+#endif
 
   return X86Internal::emitRegMove(cc()->as<Emitter>(), dstReg, srcMem, wReg->typeId(), _avxEnabled, comment);
 }
@@ -1085,12 +1103,12 @@ Error X86RAPass::onEmitSave(uint32_t workId, uint32_t srcPhysId) noexcept {
 
   const char* comment = nullptr;
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   if (_loggerFlags & FormatOptions::kFlagAnnotations) {
     _tmpString.assignFormat("<SAVE> %s", workRegById(workId)->name());
     comment = _tmpString.data();
   }
-  #endif
+#endif
 
   return X86Internal::emitRegMove(cc()->as<Emitter>(), dstMem, srcReg, wReg->typeId(), _avxEnabled, comment);
 }

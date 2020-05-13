@@ -1,12 +1,27 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#define ASMJIT_EXPORTS
-
-#include "../core/build.h"
+#include "../core/api-build_p.h"
 #ifdef ASMJIT_BUILD_X86
 
 #include "../core/logging.h"
@@ -14,6 +29,9 @@
 #include "../core/support.h"
 #include "../core/type.h"
 #include "../x86/x86internal_p.h"
+
+// Can be used for debugging...
+// #define ASMJIT_DUMP_ARGS_ASSIGNMENT
 
 ASMJIT_BEGIN_SUB_NAMESPACE(x86)
 
@@ -50,7 +68,7 @@ static inline uint32_t x86KmovFromSize(uint32_t size) noexcept {
 // ============================================================================
 
 ASMJIT_FAVOR_SIZE Error X86Internal::initFuncDetail(FuncDetail& func, const FuncSignature& sign, uint32_t gpSize) noexcept {
-  ASMJIT_UNUSED(sign);
+  DebugUtils::unused(sign);
 
   const CallConv& cc = func.callConv();
   uint32_t archId = cc.archId();
@@ -315,10 +333,10 @@ public:
     }
 
     inline void unassign(uint32_t varId, uint32_t regId) noexcept {
-      ASMJIT_UNUSED(varId);
       ASMJIT_ASSERT(isAssigned(regId));
       ASMJIT_ASSERT(_physToVarId[regId] == varId);
 
+      DebugUtils::unused(varId);
       _physToVarId[regId] = uint8_t(kVarIdNone);
       _assignedRegs ^= Support::bitMask(regId);
     }
@@ -742,7 +760,7 @@ ASMJIT_FAVOR_SIZE Error X86Internal::finalizeFuncFrame(FuncFrame& frame) noexcep
 
   // If the function's stack must be aligned, calculate the alignment necessary
   // to store vector registers, and set `FuncFrame::kAttrAlignedVecSR` to inform
-  // PEI that it can use instructions to perform aligned stores/loads.
+  // PEI that it can use instructions that perform aligned stores/loads.
   if (stackAlignment >= vecSize && frame._nonGpSaveSize) {
     frame.addAttributes(FuncFrame::kAttrAlignedVecSR);
     v = Support::alignUp(v, vecSize);         // Align '_nonGpSaveOffset'.
@@ -824,6 +842,7 @@ ASMJIT_FAVOR_SIZE Error X86Internal::emitRegMove(Emitter* emitter,
 
   uint32_t instId = Inst::kIdNone;
   uint32_t memFlags = 0;
+  uint32_t overrideMemSize = 0;
 
   enum MemFlags : uint32_t {
     kDstMem = 0x1,
@@ -876,6 +895,7 @@ ASMJIT_FAVOR_SIZE Error X86Internal::emitRegMove(Emitter* emitter,
     default: {
       uint32_t elementTypeId = Type::baseOf(typeId);
       if (Type::isVec32(typeId) && memFlags) {
+        overrideMemSize = 4;
         if (elementTypeId == Type::kIdF32)
           instId = avxEnabled ? Inst::kIdVmovss : Inst::kIdMovss;
         else
@@ -884,6 +904,7 @@ ASMJIT_FAVOR_SIZE Error X86Internal::emitRegMove(Emitter* emitter,
       }
 
       if (Type::isVec64(typeId) && memFlags) {
+        overrideMemSize = 8;
         if (elementTypeId == Type::kIdF64)
           instId = avxEnabled ? Inst::kIdVmovsd : Inst::kIdMovsd;
         else
@@ -907,6 +928,11 @@ ASMJIT_FAVOR_SIZE Error X86Internal::emitRegMove(Emitter* emitter,
 
   if (!instId)
     return DebugUtils::errored(kErrorInvalidState);
+
+  if (overrideMemSize) {
+    if (dst.isMem()) dst.as<Mem>().setSize(overrideMemSize);
+    if (src.isMem()) src.as<Mem>().setSize(overrideMemSize);
+  }
 
   emitter->setInlineComment(comment);
   return emitter->emit(instId, dst, src);
@@ -1311,7 +1337,7 @@ ASMJIT_FAVOR_SIZE Error X86Internal::emitEpilog(Emitter* emitter, const FuncFram
 // [asmjit::X86Internal - Emit Arguments Assignment]
 // ============================================================================
 
-#ifndef ASMJIT_NO_LOGGING
+#ifdef ASMJIT_DUMP_ARGS_ASSIGNMENT
 static void dumpFuncValue(String& sb, uint32_t archId, const FuncValue& value) noexcept {
   Logging::formatTypeId(sb, value.typeId());
   sb.appendChar('@');
@@ -1364,13 +1390,13 @@ ASMJIT_FAVOR_SIZE Error X86Internal::emitArgsAssignment(Emitter* emitter, const 
   X86FuncArgsContext ctx;
   ASMJIT_PROPAGATE(ctx.initWorkData(frame, args));
 
-  /*
+#ifdef ASMJIT_DUMP_ARGS_ASSIGNMENT
   {
     String sb;
     dumpAssignment(sb, ctx);
     printf("%s\n", sb.data());
   }
-  */
+#endif
 
   uint32_t archId = ctx.archId();
   uint32_t varCount = ctx._varCount;

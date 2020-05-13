@@ -1,13 +1,30 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef _ASMJIT_CORE_BUILDER_H
-#define _ASMJIT_CORE_BUILDER_H
+#ifndef ASMJIT_CORE_BUILDER_H_INCLUDED
+#define ASMJIT_CORE_BUILDER_H_INCLUDED
 
-#include "../core/build.h"
+#include "../core/api-config.h"
 #ifndef ASMJIT_NO_BUILDER
 
 #include "../core/assembler.h"
@@ -43,6 +60,9 @@ class ConstPoolNode;
 class CommentNode;
 class SentinelNode;
 class LabelDeltaNode;
+
+// Only used by Compiler infrastructure.
+class JumpAnnotation;
 
 // ============================================================================
 // [asmjit::BaseBuilder]
@@ -113,9 +133,9 @@ public:
   }
 
   //! \overload
-  template<typename T, typename... ArgsT>
-  inline T* newNodeT(ArgsT&&... args) noexcept {
-    return _allocator.newT<T>(this, std::forward<ArgsT>(args)...);
+  template<typename T, typename... Args>
+  inline T* newNodeT(Args&&... args) noexcept {
+    return _allocator.newT<T>(this, std::forward<Args>(args)...);
   }
 
   //! Creates a new `LabelNode`.
@@ -260,14 +280,14 @@ public:
   inline T* newPassT() noexcept { return _codeZone.newT<T>(); }
 
   //! \overload
-  template<typename T, typename... ArgsT>
-  inline T* newPassT(ArgsT&&... args) noexcept { return _codeZone.newT<T>(std::forward<ArgsT>(args)...); }
+  template<typename T, typename... Args>
+  inline T* newPassT(Args&&... args) noexcept { return _codeZone.newT<T>(std::forward<Args>(args)...); }
 
   template<typename T>
   inline Error addPassT() noexcept { return addPass(newPassT<T>()); }
 
-  template<typename T, typename... ArgsT>
-  inline Error addPassT(ArgsT&&... args) noexcept { return addPass(newPassT<T, ArgsT...>(std::forward<ArgsT>(args)...)); }
+  template<typename T, typename... Args>
+  inline Error addPassT(Args&&... args) noexcept { return addPass(newPassT<T, Args...>(std::forward<Args>(args)...)); }
 
   //! Returns `Pass` by name.
   ASMJIT_API Pass* passByName(const char* name) const noexcept;
@@ -328,9 +348,9 @@ public:
   //! \name Logging
   //! \{
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   ASMJIT_API Error dump(String& sb, uint32_t flags = 0) const noexcept;
-  #endif
+#endif
 
   //! \}
 
@@ -454,6 +474,8 @@ public:
 
     // [BaseCompiler]
 
+    //! Node is `JumpNode` (acts as InstNode).
+    kNodeJump = 15,
     //! Node is `FuncNode` (acts as LabelNode).
     kNodeFunc = 16,
     //! Node is `FuncRetNode` (acts as InstNode).
@@ -748,6 +770,11 @@ public:
   inline void resetOp(uint32_t index) noexcept {
     ASMJIT_ASSERT(index < opCapacity());
     _opArray[index].reset();
+  }
+
+  inline void resetOps(uint32_t start, uint32_t end) noexcept {
+    for (uint32_t i = start; i < end; i++)
+      _opArray[i].reset();
   }
 
   //! \}
@@ -1275,4 +1302,4 @@ public:
 ASMJIT_END_NAMESPACE
 
 #endif // !ASMJIT_NO_BUILDER
-#endif // _ASMJIT_CORE_BUILDER_H
+#endif // ASMJIT_CORE_BUILDER_H_INCLUDED

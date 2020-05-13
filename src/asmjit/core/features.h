@@ -1,11 +1,28 @@
-// [AsmJit]
-// Machine Code Generation for C++.
+// AsmJit - Machine code generation for C++
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official AsmJit Home Page: https://asmjit.com
+//  * Official Github Repository: https://github.com/asmjit/asmjit
+//
+// Copyright (c) 2008-2020 The AsmJit Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef _ASMJIT_CORE_FEATURES_H
-#define _ASMJIT_CORE_FEATURES_H
+#ifndef ASMJIT_CORE_FEATURES_H_INCLUDED
+#define ASMJIT_CORE_FEATURES_H_INCLUDED
 
 #include "../core/globals.h"
 #include "../core/support.h"
@@ -106,8 +123,8 @@ public:
     _bits[idx] |= BitWord(1) << bit;
   }
 
-  template<typename... ArgsT>
-  inline void add(uint32_t featureId, ArgsT... otherIds) noexcept {
+  template<typename... Args>
+  inline void add(uint32_t featureId, Args... otherIds) noexcept {
     add(featureId);
     add(otherIds...);
   }
@@ -122,8 +139,8 @@ public:
     _bits[idx] &= ~(BitWord(1) << bit);
   }
 
-  template<typename... ArgsT>
-  inline void remove(uint32_t featureId, ArgsT... otherIds) noexcept {
+  template<typename... Args>
+  inline void remove(uint32_t featureId, Args... otherIds) noexcept {
     remove(featureId);
     remove(otherIds...);
   }
@@ -142,4 +159,4 @@ public:
 
 ASMJIT_END_NAMESPACE
 
-#endif // _ASMJIT_CORE_FEATURES_H
+#endif // ASMJIT_CORE_FEATURES_H_INCLUDED
